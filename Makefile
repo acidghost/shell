@@ -9,7 +9,7 @@ endif
 
 all: sh
 
-sh: utils.c
+sh: parsing.c utils.c
 
 clean:
 	rm -rf sh *.dSYM
