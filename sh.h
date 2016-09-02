@@ -16,13 +16,13 @@
 extern int errno;
 
 #define GET_MACRO(_0, _1, _2, NAME, ...) NAME
-#define sh_print_error_2(errorstr, errno) { \
+#define sh_error_2(errorstr, errno) { \
   fprintf(stderr, "xv6 error: %s\n", errorstr);  \
   exit(errno); \
 }
-#define sh_print_error_1(errorstr) sh_print_error_2(errorstr, errno)
-#define sh_print_error_0() sh_print_error_1(strerror(errno))
-#define sh_print_error(...) GET_MACRO(__VA_ARGS__, sh_print_error_2, sh_print_error_1, sh_print_error_0)(__VA_ARGS__)
+#define sh_error_1(errorstr) sh_error_2(errorstr, errno)
+#define sh_error_0(...) sh_error_1(strerror(errno))
+#define sh_error(...) GET_MACRO(_0, ##__VA_ARGS__, sh_error_2, sh_error_1, sh_error_0)(__VA_ARGS__)
 
 
 // All commands have at least a type. Have looked at the type, the code

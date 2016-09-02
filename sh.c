@@ -18,15 +18,14 @@ runcmd(struct cmd *cmd)
 
   switch(cmd->type){
   default:
-    fprintf(stderr, "unknown runcmd\n");
-    exit(-1);
+    sh_error("unknown runcmd", -1);
 
   case ' ':
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
       exit(0);
     if (execvp(ecmd->argv[0], ecmd->argv) == -1)
-      sh_print_error();
+      sh_error();
     break;
 
   case '>':
@@ -34,7 +33,7 @@ runcmd(struct cmd *cmd)
     rcmd = (struct redircmd*)cmd;
     int fd = open(rcmd->file, rcmd->mode, 0644);
     if (fd == -1 || dup2(fd, rcmd->fd) == -1 || close(fd) == -1)
-      sh_print_error();
+      sh_error();
     runcmd(rcmd->cmd);
     break;
 
