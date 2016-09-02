@@ -31,7 +31,9 @@ runcmd(struct cmd *cmd)
   case '>':
   case '<':
     rcmd = (struct redircmd*)cmd;
-    int fd = open(rcmd->file, rcmd->mode, 0644);
+    int fd = (rcmd->mode & O_CREAT) ?
+                open(rcmd->file, rcmd->mode, 0644) :
+                open(rcmd->file, rcmd->mode);
     if (fd == -1 || dup2(fd, rcmd->fd) == -1 || close(fd) == -1)
       sh_error();
     runcmd(rcmd->cmd);
