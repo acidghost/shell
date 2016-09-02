@@ -1,5 +1,6 @@
 CC=gcc
 
+CFLAGS += -Wall
 ifdef DEBUG
 	CFLAGS += -g
 endif
