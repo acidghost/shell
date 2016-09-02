@@ -8,7 +8,6 @@ struct cmd *parsecmd(char*);
 void
 runcmd(struct cmd *cmd)
 {
-  int p[2], r;
   struct execcmd *ecmd;
   struct pipecmd *pcmd;
   struct redircmd *rcmd;
@@ -39,8 +38,20 @@ runcmd(struct cmd *cmd)
 
   case '|':
     pcmd = (struct pipecmd*)cmd;
-    fprintf(stderr, "pipe not implemented\n");
-    // Your code here ...
+    int p[2];
+    if (pipe(p) == -1)
+      sh_error();
+    if (fork1() == 0) { // child process
+      fprintf(stderr, "Running right command\n");
+      dup2(p[0], 0);
+      runcmd(pcmd->right);
+    }
+    fprintf(stderr, "Running left command\n");
+    dup2(p[1], 1);
+    close(p[1]);
+    runcmd(pcmd->left);
+    // if (close(p[0]) == -1 || close(p[1]) == -1)
+    //   sh_error();
     break;
   }
   exit(0);
@@ -63,7 +74,7 @@ int
 main(void)
 {
   static char buf[100];
-  int fd, r;
+  int r;
 
   // Read and run input commands.
   while(getcmd(buf, sizeof(buf)) >= 0){
