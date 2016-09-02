@@ -48,6 +48,12 @@ runcmd(struct cmd *cmd)
   exit(0);
 }
 
+unsigned short
+is_arrow_up(char *buf)
+{
+  return (buf[0] == '\033' && buf[1] == '[' && buf[2] == 'A') ? 1 : 0;
+}
+
 int
 getcmd(char *buf, int nbuf)
 {
@@ -55,7 +61,19 @@ getcmd(char *buf, int nbuf)
   if (isatty(fileno(stdin)))
     fprintf(stdout, "$ ");
   memset(buf, 0, nbuf);
-  fgets(buf, nbuf, stdin);
+  fflush(stdin);
+  buf[0] = getchar();
+  fflush(stdin);
+  printf("%c\n", buf[0]);
+  buf[1] = getchar();
+  printf("%c\n", buf[1]);
+  buf[2] = getchar();
+  printf("%c\n", buf[2]);
+  if (is_arrow_up(buf)) {
+    printf("Arrow up!\n");
+  } else {
+    fgets(buf + 3, nbuf - 3, stdin);
+  }
   if(buf[0] == 0) // EOF
     return -1;
   return 0;
