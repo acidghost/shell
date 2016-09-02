@@ -1,6 +1,6 @@
 CC=gcc
 
-CFLAGS += -Wall
+CFLAGS += -Wall -Werror -Wno-unused-variable -Wno-unused-but-set-variable
 ifdef DEBUG
 	CFLAGS += -g
 endif

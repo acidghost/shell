@@ -32,3 +32,6 @@ sh
 # Debug files
 *.dSYM/
 *.su
+
+# VM-related
+.vagrant
