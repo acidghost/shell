@@ -4,16 +4,16 @@
 #include <fcntl.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 
 // Simplifed xv6 shell.
 
 #define MAXARGS 10
 
-
-extern int errno;
 
 #define GET_MACRO(_0, _1, _2, NAME, ...) NAME
 #define sh_error_2(errorstr, errno) { \
