@@ -10,19 +10,13 @@
 #include <sys/wait.h>
 
 
+#ifndef _SH_H
+#define _SH_H_
+
 // Simplifed xv6 shell.
 
 #define MAXARGS 10
 
-
-#define GET_MACRO(_0, _1, _2, NAME, ...) NAME
-#define sh_error_2(errorstr, errno) { \
-  fprintf(stderr, "xv6 error: %s\n", errorstr);  \
-  exit(errno); \
-}
-#define sh_error_1(errorstr) sh_error_2(errorstr, errno)
-#define sh_error_0(...) sh_error_1(strerror(errno))
-#define sh_error(...) GET_MACRO(_0, ##__VA_ARGS__, sh_error_2, sh_error_1, sh_error_0)(__VA_ARGS__)
 
 
 // All commands have at least a type. Have looked at the type, the code
@@ -49,3 +43,6 @@ struct pipecmd {
   struct cmd *left;  // left side of pipe
   struct cmd *right; // right side of pipe
 };
+
+
+#endif

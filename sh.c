@@ -1,10 +1,8 @@
 #include "sh.h"
+#include "utils.h"
 
 
-int fork1(void);        // Fork but exits on failure.
 struct cmd *parsecmd(char*);
-void close1(int);       // Close file and exits on failure
-int dup21(int, int);    // like dup2 but exits on failure
 
 // Execute cmd.  Never returns.
 void
@@ -103,17 +101,6 @@ main(void)
     wait(&r);
   }
   exit(0);
-}
-
-int
-fork1(void)
-{
-  int pid;
-
-  pid = fork();
-  if(pid == -1)
-    perror("fork");
-  return pid;
 }
 
 struct cmd*
@@ -317,20 +304,4 @@ parseexec(char **ps, char *es)
   }
   cmd->argv[argc] = 0;
   return ret;
-}
-
-inline void
-close1(int fd)
-{
-  if (close(fd) == -1)
-    sh_error();
-}
-
-inline int
-dup21(int fd1, int fd2)
-{
-  int r;
-  if ((r = dup2(fd1, fd2)) == -1)
-    sh_error();
-  return r;
 }
