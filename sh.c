@@ -12,7 +12,14 @@
 #define MAXARGS 10
 
 extern int errno;
-#define sh_print_error(errorstr) fprintf(stderr, "xv6 error: %s\n", errorstr)
+
+#define GET_MACRO(_1, _2, NAME, ...) NAME
+#define sh_print_error_2(errorstr, errno) { \
+  fprintf(stderr, "xv6 error: %s\n", errorstr);  \
+  exit(errno); \
+}
+#define sh_print_error_1(errorstr) sh_print_error_2(errorstr, errno)
+#define sh_print_error(...) GET_MACRO(__VA_ARGS__, sh_print_error_2, sh_print_error_1)(__VA_ARGS__)
 
 // All commands have at least a type. Have looked at the type, the code
 // typically casts the *cmd to some specific cmd type.
@@ -70,8 +77,9 @@ runcmd(struct cmd *cmd)
   case '>':
   case '<':
     rcmd = (struct redircmd*)cmd;
-    fprintf(stderr, "redir not implemented\n");
-    // Your code here ...
+    int fd = open(rcmd->file, rcmd->mode, 0644);
+    if (fd == -1 || dup2(fd, rcmd->fd) == -1 || close(fd) == -1)
+      sh_print_error(strerror(errno));
     runcmd(rcmd->cmd);
     break;
 
