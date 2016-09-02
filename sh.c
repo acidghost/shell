@@ -54,25 +54,58 @@ is_arrow_up(char *buf)
   return (buf[0] == '\033' && buf[1] == '[' && buf[2] == 'A') ? 1 : 0;
 }
 
+size_t
+parse_raw_tty(char* buf)
+{
+  struct termios oldt, newt;
+  size_t ret_value = 0;
+  // retrieve old tty configs
+  tcgetattr(STDIN_FILENO, &oldt);
+  newt = oldt;
+  // change flags
+  newt.c_lflag &= ~(ICANON);
+  // set new configs now
+  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+  // parse escape sequence (arrows, Ctrl-something, etc...)
+  char chars[MAX_CTRL + 1];
+  int c;
+  short i = 0;
+  while (i < MAX_CTRL && (c = getchar()) != EOF) {
+    chars[i] = (char) c;
+    i++;
+  }
+  chars[MAX_CTRL] = '\0';
+  if (is_arrow_up(chars)) {
+    const char *cmd = "ls -al";
+    fprintf(stdout, "\r"PROMPT"%s", cmd);
+    strcpy(buf, cmd);
+    ret_value = strlen(cmd);
+  } else {
+    // rewind chars not related to escape sequence
+    for (i = MAX_CTRL - 1; i >= 0; i--) {
+      if (ungetc(chars[i], stdin) == -1)
+        sh_error();
+    }
+  }
+
+  // restore old configs
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+  return ret_value;
+}
+
 int
 getcmd(char *buf, int nbuf)
 {
 
   if (isatty(fileno(stdin)))
-    fprintf(stdout, "$ ");
+    fprintf(stdout, PROMPT);
   memset(buf, 0, nbuf);
-  fflush(stdin);
-  buf[0] = getchar();
-  fflush(stdin);
-  printf("%c\n", buf[0]);
-  buf[1] = getchar();
-  printf("%c\n", buf[1]);
-  buf[2] = getchar();
-  printf("%c\n", buf[2]);
-  if (is_arrow_up(buf)) {
-    printf("Arrow up!\n");
+  size_t raw_tty_n;
+  if ((raw_tty_n = parse_raw_tty(buf)) > 0) {
+    fgets(buf + raw_tty_n, nbuf - raw_tty_n, stdin);
   } else {
-    fgets(buf + 3, nbuf - 3, stdin);
+    fgets(buf, nbuf, stdin);
   }
   if(buf[0] == 0) // EOF
     return -1;

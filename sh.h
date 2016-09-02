@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <termios.h>
 #include <fcntl.h>
 #include <string.h>
 #include <assert.h>
@@ -13,6 +14,8 @@
 // Simplifed xv6 shell.
 
 #define MAXARGS 10
+#define MAX_CTRL 3
+#define PROMPT "$ "
 
 
 #define GET_MACRO(_0, _1, _2, NAME, ...) NAME
