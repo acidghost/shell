@@ -1,8 +1,10 @@
 #include "sh.h"
 
 
-int fork1(void);  // Fork but exits on failure.
+int fork1(void);        // Fork but exits on failure.
 struct cmd *parsecmd(char*);
+void close1(int);       // Close file and exits on failure
+int dup21(int, int);    // like dup2 but exits on failure
 
 // Execute cmd.  Never returns.
 void
@@ -11,6 +13,7 @@ runcmd(struct cmd *cmd)
   struct execcmd *ecmd;
   struct pipecmd *pcmd;
   struct redircmd *rcmd;
+  int fd;
 
   if(cmd == 0)
     exit(0);
@@ -30,7 +33,7 @@ runcmd(struct cmd *cmd)
   case '>':
   case '<':
     rcmd = (struct redircmd*)cmd;
-    int fd = (rcmd->mode & O_CREAT) ?
+    fd = (rcmd->mode & O_CREAT) ?
                 open(rcmd->file, rcmd->mode, 0644) :
                 open(rcmd->file, rcmd->mode);
     if (fd == -1 || dup2(fd, rcmd->fd) == -1 || close(fd) == -1)
@@ -41,19 +44,26 @@ runcmd(struct cmd *cmd)
   case '|':
     pcmd = (struct pipecmd*)cmd;
     int p[2];
+    // create pipe
     if (pipe(p) == -1)
       sh_error();
-    if (fork1() == 0) { // child process
-      fprintf(stderr, "Running right command\n");
-      dup2(p[0], 0);
+    // fork process
+    switch (fork()) {
+    case -1:
+      sh_error("error forking while piping", -1);
+    // child process
+    case 0:
+      fd = dup21(p[0], 0);
+      close1(p[1]);
       runcmd(pcmd->right);
+      break;
+    // parent process
+    default:
+      fd = dup21(p[1], 1);
+      close1(p[0]);
+      runcmd(pcmd->left);
     }
-    fprintf(stderr, "Running left command\n");
-    dup2(p[1], 1);
-    close(p[1]);
-    runcmd(pcmd->left);
-    // if (close(p[0]) == -1 || close(p[1]) == -1)
-    //   sh_error();
+    close1(fd);
     break;
   }
   exit(0);
@@ -307,4 +317,20 @@ parseexec(char **ps, char *es)
   }
   cmd->argv[argc] = 0;
   return ret;
+}
+
+inline void
+close1(int fd)
+{
+  if (close(fd) == -1)
+    sh_error();
+}
+
+inline int
+dup21(int fd1, int fd2)
+{
+  int r;
+  if ((r = dup2(fd1, fd2)) == -1)
+    sh_error();
+  return r;
 }
