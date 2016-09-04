@@ -86,7 +86,8 @@ parse_raw_tty(char* buf)
   tcgetattr(STDIN_FILENO, &oldt);
   newt = oldt;
   // change flags
-  newt.c_lflag &= ~(ICANON);
+  newt.c_lflag &= ~ICANON;
+  newt.c_lflag &= ~ECHO;
   // set new configs now
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
@@ -96,12 +97,18 @@ parse_raw_tty(char* buf)
   short i = 0;
   while (i < MAX_CTRL && (c = getchar()) != EOF) {
     chars[i] = (char) c;
-    i++;
+    if (chars[i] == newt.c_cc[VERASE]) {
+      chars[i] = 0; chars[i--] = 0;
+      fprintf(stdout, "\b \b");
+    } else {
+      fprintf(stdout, "%c", c);
+      i++;
+    }
   }
   chars[MAX_CTRL] = '\0';
   if (is_arrow_up(chars)) {
     const char *cmd = "ls -al";
-    fprintf(stdout, "\r"PROMPT"%s", cmd);
+    fprintf(stdout, "\n"PROMPT"%s", cmd);
     strcpy(buf, cmd);
     ret_value = strlen(cmd);
   } else {
@@ -120,7 +127,6 @@ parse_raw_tty(char* buf)
 int
 getcmd(char *buf, int nbuf)
 {
-
   if (isatty(fileno(stdin)))
     fprintf(stdout, PROMPT);
   memset(buf, 0, nbuf);
