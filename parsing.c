@@ -1,5 +1,6 @@
 #include "sh.h"
 #include "parsing.h"
+#include "utils.h"
 
 
 char whitespace[] = " \t\r\n\v";
@@ -203,4 +204,77 @@ parseexec(char **ps, char *es)
   }
   cmd->argv[argc] = 0;
   return ret;
+}
+
+
+char*
+cmdtostr(struct cmd* cmd)
+{
+  if (!cmd)
+    return NULL;
+
+  struct execcmd *ecmd;
+  struct redircmd *rcmd;
+  struct pipecmd *pcmd;
+
+  size_t stri = 0;
+  char *str = malloc(stri);
+
+  switch (cmd->type) {
+  case ' ':
+    ecmd = (struct execcmd *) cmd;
+    for (size_t i = 0; i < MAXARGS; i++) {
+      char *arg = ecmd->argv[i];
+      if (arg == NULL)
+        break;
+
+      char* argend = strchr(arg, '\0');
+      if (argend != NULL) {
+        str = realloc(str, stri + strlen(arg) + (i != 0 ? 1 : 0));
+        if (i != 0)
+          str[stri++] = ' ';
+        strcpy(str + stri, arg);
+        stri += strlen(arg);
+      } else {
+        sh_error("argv does not terminate with '\\0'", -1);
+      }
+    }
+    break;
+
+  case '<':
+  case '>':
+    rcmd = (struct redircmd *) cmd;
+    char *subcmdstr = cmdtostr(rcmd->cmd);
+    size_t subcmdlen = strlen(subcmdstr);
+    size_t filelen = strlen(rcmd->file);
+    str = realloc(str, subcmdlen + 3 + filelen);
+    strcpy(str, subcmdstr);
+    stri += subcmdlen;
+    sprintf(str + stri, " %c ", rcmd->type);
+    stri += 3;
+    strcpy(str + stri, rcmd->file);
+    stri += filelen;
+    break;
+
+  case '|':
+    pcmd = (struct pipecmd *) cmd;
+    char *leftcmdstr = cmdtostr(pcmd->left);
+    char *rightcmdstr = cmdtostr(pcmd->right);
+    size_t leftlen = strlen(leftcmdstr);
+    size_t rightlen = strlen(rightcmdstr);
+    str = realloc(str, leftlen + 3 + rightlen);
+    strcpy(str, leftcmdstr);
+    stri += leftlen;
+    sprintf(str + stri, " %c ", pcmd->type);
+    stri += 3;
+    strcpy(str + stri, rightcmdstr);
+    stri += rightlen;
+    break;
+
+  default:
+    sh_error("unhandled command type in cmdtostr\n", -1);
+  }
+
+  str[++stri] = '\0';
+  return str;
 }
