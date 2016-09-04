@@ -5,6 +5,7 @@
 
 
 
+struct termios newt;
 struct hist history;
 
 
@@ -75,16 +76,6 @@ runcmd(struct cmd *cmd)
 int
 getcmd(char *buf, int nbuf)
 {
-  struct termios oldt, newt;
-  // retrieve old tty configs
-  tcgetattr(STDIN_FILENO, &oldt);
-  newt = oldt;
-  // change flags
-  newt.c_lflag &= ~ICANON;
-  newt.c_lflag &= ~ECHO;
-  // set new configs now
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
   if (isatty(fileno(stdin)))
     fprintf(stdout, PROMPT);
   memset(buf, 0, nbuf);
@@ -122,9 +113,6 @@ getcmd(char *buf, int nbuf)
   }
   fprintf(stdout, "\n");
 
-  // restore old configs
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-
   if(buf[0] == 0) // EOF
     return -1;
   return 0;
@@ -134,6 +122,16 @@ getcmd(char *buf, int nbuf)
 int
 main(void)
 {
+  struct termios oldt;
+  // retrieve old tty configs
+  tcgetattr(STDIN_FILENO, &oldt);
+  newt = oldt;
+  // change flags
+  newt.c_lflag &= ~ICANON;
+  newt.c_lflag &= ~ECHO;
+  // set new configs now
+  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
   static char buf[100];
   int r;
 
@@ -154,6 +152,9 @@ main(void)
       history_push(&history, cmd);
     wait(&r);
   }
+
+  // restore old configs
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 
   exit(EXIT_SUCCESS);
 }
