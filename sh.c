@@ -71,17 +71,11 @@ runcmd(struct cmd *cmd)
   exit(0);
 }
 
-unsigned short
-is_arrow_up(char *buf)
-{
-  return (buf[0] == '\033' && buf[1] == '[' && buf[2] == 'A') ? 1 : 0;
-}
 
-size_t
-parse_raw_tty(char* buf)
+int
+getcmd(char *buf, int nbuf)
 {
   struct termios oldt, newt;
-  size_t ret_value = 0;
   // retrieve old tty configs
   tcgetattr(STDIN_FILENO, &oldt);
   newt = oldt;
@@ -91,55 +85,49 @@ parse_raw_tty(char* buf)
   // set new configs now
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-  // parse escape sequence (arrows, Ctrl-something, etc...)
-  char chars[MAX_CTRL + 1];
+  if (isatty(fileno(stdin)))
+    fprintf(stdout, PROMPT);
+  memset(buf, 0, nbuf);
+
   int c;
-  short i = 0;
-  while (i < MAX_CTRL && (c = getchar()) != EOF) {
-    chars[i] = (char) c;
-    if (chars[i] == newt.c_cc[VERASE]) {
-      chars[i] = 0; chars[i--] = 0;
+  size_t i = 0;
+  size_t histi = 0;
+  while (i < nbuf && (c = getchar()) != '\n' && c != EOF) {
+    buf[i] = (char) c;
+    if (buf[i] == newt.c_cc[VERASE]) {
+      // erase char
+      buf[i] = 0; buf[i--] = 0;
       fprintf(stdout, "\b \b");
+    } else if (buf[i] == '\033') {
+      // esaped sequence (eg. arrows)
+      int cs[2];
+      cs[0] = getchar();
+      cs[1] = getchar();
+      if (cs[0] == '[' && cs[1] == 'A') {
+        // arrow up
+        struct cmd* cmd = history_get(&history, histi++);
+        if (cmd) {
+          const char *cmdstr = cmdtostr(cmd);
+          fprintf(stdout, "\n"PROMPT"%s", cmdstr);
+          strcpy(buf, cmdstr);
+        } else {
+          fprintf(stdout, "\n"PROMPT);
+        }
+      }
     } else {
       fprintf(stdout, "%c", c);
       i++;
     }
   }
-  chars[MAX_CTRL] = '\0';
-  if (is_arrow_up(chars)) {
-    const char *cmd = "ls -al";
-    fprintf(stdout, "\n"PROMPT"%s", cmd);
-    strcpy(buf, cmd);
-    ret_value = strlen(cmd);
-  } else {
-    // rewind chars not related to escape sequence
-    for (i = MAX_CTRL - 1; i >= 0; i--) {
-      if (ungetc(chars[i], stdin) == -1)
-        sh_error();
-    }
-  }
 
   // restore old configs
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-  return ret_value;
-}
 
-int
-getcmd(char *buf, int nbuf)
-{
-  if (isatty(fileno(stdin)))
-    fprintf(stdout, PROMPT);
-  memset(buf, 0, nbuf);
-  size_t raw_tty_n;
-  if ((raw_tty_n = parse_raw_tty(buf)) > 0) {
-    fgets(buf + raw_tty_n, nbuf - raw_tty_n, stdin);
-  } else {
-    fgets(buf, nbuf, stdin);
-  }
   if(buf[0] == 0) // EOF
     return -1;
   return 0;
 }
+
 
 int
 main(void)
@@ -162,8 +150,8 @@ main(void)
       runcmd(cmd);
     if (cmd != 0)
       history_push(&history, cmd);
-    history_print(&history);
     wait(&r);
   }
-  exit(0);
+
+  exit(EXIT_SUCCESS);
 }

@@ -1,6 +1,6 @@
 CC=gcc
 
-CFLAGS += -std=gnu99 -Wall -Werror -Wno-unused-variable -Wno-unused-but-set-variable
+CFLAGS += -std=gnu99 -Wall -Werror
 ifdef DEBUG
 	CFLAGS += -g
 endif
