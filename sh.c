@@ -94,7 +94,7 @@ getcmd(char *buf, int nbuf)
   size_t histi = 0;
   while (i < nbuf && (c = getchar()) != '\n' && c != EOF) {
     buf[i] = (char) c;
-    if (buf[i] == newt.c_cc[VERASE]) {
+    if (i > 0 && buf[i] == newt.c_cc[VERASE]) {
       // erase char
       buf[i] = 0; buf[i--] = 0;
       fprintf(stdout, "\b \b");
@@ -108,10 +108,11 @@ getcmd(char *buf, int nbuf)
         struct cmd* cmd = history_get(&history, histi++);
         if (cmd) {
           const char *cmdstr = cmdtostr(cmd);
-          fprintf(stdout, "\n"PROMPT"%s", cmdstr);
+          fprintf(stdout, "\r"PROMPT"%s", cmdstr);
           strcpy(buf, cmdstr);
+          i += strlen(cmdstr);
         } else {
-          fprintf(stdout, "\n"PROMPT);
+          fprintf(stdout, "\r"PROMPT);
         }
       }
     } else {
@@ -119,6 +120,7 @@ getcmd(char *buf, int nbuf)
       i++;
     }
   }
+  fprintf(stdout, "\n");
 
   // restore old configs
   tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
