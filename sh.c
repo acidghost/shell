@@ -1,7 +1,11 @@
 #include "sh.h"
+#include "history.h"
 #include "parsing.h"
 #include "utils.h"
 
+
+
+struct hist history;
 
 
 // Execute cmd.  Never returns.
@@ -147,8 +151,12 @@ main(void)
         fprintf(stderr, "cannot cd %s\n", buf+3);
       continue;
     }
+    struct cmd* cmd = parsecmd(buf);
     if(fork1() == 0)
-      runcmd(parsecmd(buf));
+      runcmd(cmd);
+    if (cmd != 0)
+      history_push(&history, cmd);
+    history_print(&history);
     wait(&r);
   }
   exit(0);
