@@ -19,6 +19,8 @@
 #define MAXARGS 10
 #define MAX_CTRL 3
 #define PROMPT "$ "
+#define CLEAN_LINE "\r                                                       \r"
+#define CLEAN_PROMPT CLEAN_LINE""PROMPT
 
 
 

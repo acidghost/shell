@@ -73,16 +73,26 @@ runcmd(struct cmd *cmd)
 }
 
 
+size_t
+print_command(struct cmd* cmd, char* buf)
+{
+  const char *cmdstr = cmdtostr(cmd);
+  fprintf(stdout, CLEAN_PROMPT"%s", cmdstr);
+  strcpy(buf, cmdstr);
+  return strlen(cmdstr);
+}
+
+
 int
 getcmd(char *buf, int nbuf)
 {
   if (isatty(fileno(stdin)))
-    fprintf(stdout, PROMPT);
+    fprintf(stdout, CLEAN_PROMPT);
   memset(buf, 0, nbuf);
 
   int c;
   size_t i = 0;
-  size_t histi = 0;
+  int histi = -1;
   while (i < nbuf && (c = getchar()) != '\n' && c != EOF) {
     buf[i] = (char) c;
     if (i > 0 && buf[i] == newt.c_cc[VERASE]) {
@@ -96,14 +106,28 @@ getcmd(char *buf, int nbuf)
       cs[1] = getchar();
       if (cs[0] == '[' && cs[1] == 'A') {
         // arrow up
-        struct cmd* cmd = history_get(&history, histi++);
+        struct cmd* cmd = history_get(&history, ++histi);
+        if (histi == history.size)
+          histi = 0;
         if (cmd) {
-          const char *cmdstr = cmdtostr(cmd);
-          fprintf(stdout, "\r"PROMPT"%s", cmdstr);
-          strcpy(buf, cmdstr);
-          i += strlen(cmdstr);
+          i += print_command(cmd, buf);
         } else {
-          fprintf(stdout, "\r"PROMPT);
+          fprintf(stdout, CLEAN_PROMPT);
+        }
+      } else if (cs[0] == '[' && cs[1] == 'B') {
+        // arrow down
+        if (histi <= 0) {
+          if (histi == 0) {
+            fprintf(stdout, CLEAN_PROMPT);
+            histi = -1;
+          }
+          continue;
+        }
+        struct cmd* cmd = history_get(&history, histi--);
+        if (cmd) {
+          i += print_command(cmd, buf);
+        } else {
+          fprintf(stdout, CLEAN_PROMPT);
         }
       }
     } else {
